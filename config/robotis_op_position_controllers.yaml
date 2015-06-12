@@ -1,0 +1,90 @@
+#ROBOTIS OP:
+# Position controllers ---------------------------------------
+
+ # HEAD
+
+  j_pan_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_pan
+
+  j_tilt_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_tilt
+
+
+  # ARMS
+
+  j_shoulder_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_shoulder_l
+
+  j_high_arm_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_high_arm_l
+
+  j_low_arm_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_low_arm_l
+
+  j_shoulder_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_shoulder_r
+
+  j_high_arm_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_high_arm_r
+
+  j_low_arm_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_low_arm_r
+
+
+  # LEGS
+
+  j_pelvis_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_pelvis_l
+
+  j_thigh1_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_thigh1_l
+
+  j_thigh2_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_thigh2_l
+
+  j_tibia_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_tibia_l
+
+  j_ankle1_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_ankle1_l
+
+  j_ankle2_l_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_ankle2_l
+
+  j_pelvis_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_pelvis_r
+
+  j_thigh1_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_thigh1_r
+
+  j_thigh2_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_thigh2_r
+
+  j_tibia_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_tibia_r
+
+  j_ankle1_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_ankle1_r
+
+  j_ankle2_r_position_controller:
+    type: position_controllers/JointPositionController
+    joint: j_ankle2_r
