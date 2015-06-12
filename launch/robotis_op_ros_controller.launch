@@ -2,7 +2,7 @@
 
 <launch>
 
-    <rosparam file="$(find robotis_op_ros_control)/config/intialization.yaml" command="load" />
+    <rosparam file="$(find robotis_op_ros_control)/config/initialization.yaml" command="load" />
     <!-- Load joint controller configurations from YAML file to parameter server -->
     <rosparam file="$(find robotis_op_ros_control)/config/robotis_op_states.yaml" command="load" />
     <rosparam file="$(find robotis_op_ros_control)/config/robotis_op_position_controllers.yaml" command="load" />
