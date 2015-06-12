@@ -73,6 +73,10 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
 {
     print_check_fall_debug_info_ = false;
 
+    ros::NodeHandle nh;
+    int wakeup_motion;
+    nh.getParam("/robotis_op/robotis_op_ros_controller/wake_up_motion",wakeup_motion);
+
     // Initialize ROBOTIS-OP  Framework
     cm730_device_ = std::string("/dev/ttyUSB0");
     action_file_ = std::string("/robotisop2/Data/motion_4096.bin");
@@ -103,7 +107,8 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
     MotionManager::GetInstance()->SetEnable(true);
 
     /** Init(stand up) pose */
-    if(Action::GetInstance()->Start(15))
+    ROS_INFO("Wake up position is %i",wakeup_motion);
+    if(Action::GetInstance()->Start(wakeup_motion))
         ROS_INFO("Moving to wake up position ...");
     else
         ROS_ERROR("Initialization error Action");
