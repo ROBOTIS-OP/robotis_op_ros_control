@@ -79,8 +79,8 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
 
     // Initialize ROBOTIS-OP  Framework
     cm730_device_ = std::string("/dev/ttyUSB0");
-    action_file_ = std::string("/robotisop2/Data/motion_4096.bin");
-    config_file_ = std::string("/robotisop2/Data/config.ini");
+    action_file_ = std::string("/robotis/Data/motion_4096.bin");
+    config_file_ = std::string("/robotis/Data/config.ini");
 
     if(false == Action::GetInstance()->LoadFile((char *)action_file_.c_str()))
     {
