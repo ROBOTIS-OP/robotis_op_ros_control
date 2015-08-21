@@ -2,6 +2,8 @@
 #include <angles/angles.h>
 #include <math.h>
 
+#include <std_msgs/Float64.h>
+
 namespace robotis_op
 {
 using namespace Robot;
@@ -43,24 +45,24 @@ const int RobotisOPHardwareInterface::ros_joint_offsets[JointData::NUMBER_OF_JOI
     0,        //j_high_arm_l
     0,        //j_low_arm_r
     0,        //j_low_arm_l
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
-    0,        //
+    0,        //j_pelvis_r
+    0,        //j_pelvis_l
+    0,        //j_thigh1_r
+    0,        //j_thigh1_l
+    0,        //j_thigh2_r
+    0,        //j_thigh2_l
+    0,        //j_tibia_r
+    0,        //j_tibia_l
+    0,        //j_ankle1_r
+    0,        //j_ankle1_l
+    0,        //j_ankle2_r
+    0,        //j_ankle2_l
+    0,        //j_pan
+    0,        //j_tilt
+    0,        //j_wrist_r
+    0,        //j_wrist_l
+    0,        //j_gripper_r
+    0,        //j_gripper_l
 };
 
 RobotisOPHardwareInterface::Ptr RobotisOPHardwareInterface::singelton = RobotisOPHardwareInterface::Ptr();
@@ -72,6 +74,8 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
     , last_joint_state_read_(ros::Time::now())
 {
     print_check_fall_debug_info_ = false;
+    block_write_ = true;
+    controller_running_ = false;
 
     ros::NodeHandle nh;
     int wakeup_motion;
@@ -87,6 +91,7 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
         ROS_ERROR("Reading Action File failed!");
     }
 
+
     linux_cm730_ = new LinuxCM730((char *)cm730_device_.c_str());
     cm730_ = new CM730(linux_cm730_);
     MotionManager::GetInstance();
@@ -95,9 +100,12 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
     {
         ROS_ERROR("Initializing Motion Manager failed! ");
     }
+
     minIni ini =  minIni(config_file_);
     MotionManager::GetInstance()->LoadINISettings(&ini);
+
     MotionManager::GetInstance()->AddModule((MotionModule*)Action::GetInstance());
+
 
     motion_timer_ = new LinuxMotionTimer(MotionManager::GetInstance());
     ROS_INFO("Starting Motion Timer...");
@@ -111,7 +119,7 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
     if(Action::GetInstance()->Start(wakeup_motion))
         ROS_INFO("Moving to wake up position ...");
     else
-        ROS_ERROR("Initialization error Action");
+        ROS_ERROR("Wake up action failed");
     while(Action::GetInstance()->IsRunning())
     {
         usleep(8*1000);
@@ -120,7 +128,6 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
     MotionManager::GetInstance()->AddModule((MotionModule*)Walking::GetInstance());
     MotionManager::GetInstance()->AddModule((MotionModule*)Head::GetInstance());
     MotionStatus::m_CurrentJoints.SetEnableBody(true,true);
-
 
     /** register joints */
     // dispatching joints
@@ -139,12 +146,12 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
 
     /** register sensors */
     // IMU
-    imu_data.name = "imu";
-    imu_data.frame_id = "MP_BODY";
-    imu_data.orientation = imu_orientation;
-    imu_data.angular_velocity = imu_angular_velocity;
-    imu_data.linear_acceleration = imu_linear_acceleration;
-    hardware_interface::ImuSensorHandle imu_sensor_handle(imu_data);
+    imu_data_.name = "imu";
+    imu_data_.frame_id = "MP_BODY";
+    imu_data_.orientation = imu_orientation_;
+    imu_data_.angular_velocity = imu_angular_velocity_;
+    imu_data_.linear_acceleration = imu_linear_acceleration_;
+    hardware_interface::ImuSensorHandle imu_sensor_handle(imu_data_);
     imu_sensor_interface_.registerHandle(imu_sensor_handle);
     registerInterface(&imu_sensor_interface_);
 
@@ -201,40 +208,54 @@ void RobotisOPHardwareInterface::read(ros::Time time, ros::Duration period)
 
         pos_[id_index]= angles::from_degrees(MotionStatus::m_CurrentJoints.GetAngle(joint_index)+ros_joint_offsets[joint_index]);
 
+
         //reading velocity and acceleration with the current firmware is not possible without jamming the cm730, state 05/2015
     }
 
     //IMU
-
     double filter_alpha = 0.5;
 
     //in rad/s
-    imu_angular_velocity[0] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L)-512)*1600.0*M_PI/(512.0*180.0),imu_angular_velocity[0]);
-    imu_angular_velocity[1] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L)-512)*1600.0*M_PI/(512.0*180.0),imu_angular_velocity[1]);
-    imu_angular_velocity[2] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L)-512)*1600.0*M_PI/(512.0*180.0),imu_angular_velocity[2]);
+    imu_angular_velocity_[0] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_X_L)-512)*1600.0*M_PI/(512.0*180.0),imu_angular_velocity_[0]);
+    imu_angular_velocity_[1] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Y_L)-512)*1600.0*M_PI/(512.0*180.0),imu_angular_velocity_[1]);
+    imu_angular_velocity_[2] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_GYRO_Z_L)-512)*1600.0*M_PI/(512.0*180.0),imu_angular_velocity_[2]);
 
     //in m/s^2
-    imu_linear_acceleration[0] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)-512)*G_ACC*4.0/512.0,imu_linear_acceleration[0]);
-    imu_linear_acceleration[1] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)-512)*G_ACC*4.0/512.0,imu_linear_acceleration[1]);
-    imu_linear_acceleration[2] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)-512)*G_ACC*4.0/512.0,imu_linear_acceleration[2]);
+    imu_linear_acceleration_[0] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_X_L)-512)*G_ACC*4.0/512.0,imu_linear_acceleration_[0]);
+    imu_linear_acceleration_[1] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Y_L)-512)*G_ACC*4.0/512.0,imu_linear_acceleration_[1]);
+    imu_linear_acceleration_[2] = lowPassFilter(filter_alpha,(cm730_->m_BulkReadData[CM730::ID_CM].ReadWord(CM730::P_ACCEL_Z_L)-512)*G_ACC*4.0/512.0,imu_linear_acceleration_[2]);
 
     //Estimation of roll and pitch based on accelometer data, see http://theccontinuum.com/2012/09/24/arduino-imu-pitch-roll-from-accelerometer/
-    double sign = copysignf(1.0,  imu_linear_acceleration[2]/G_ACC);
-    double roll = atan2( imu_linear_acceleration[1]/G_ACC, sign * sqrt( imu_linear_acceleration[0]/G_ACC* imu_linear_acceleration[0]/G_ACC +  imu_linear_acceleration[2]/G_ACC* imu_linear_acceleration[2]/G_ACC));
-    double pitch = -atan2( imu_linear_acceleration[0]/G_ACC, sqrt( imu_linear_acceleration[1]/G_ACC* imu_linear_acceleration[1]/G_ACC +  imu_linear_acceleration[2]/G_ACC* imu_linear_acceleration[2]/G_ACC));
+    double sign = copysignf(1.0,  imu_linear_acceleration_[2]/G_ACC);
+    double roll = atan2( imu_linear_acceleration_[1]/G_ACC, sign * sqrt( imu_linear_acceleration_[0]/G_ACC* imu_linear_acceleration_[0]/G_ACC +  imu_linear_acceleration_[2]/G_ACC* imu_linear_acceleration_[2]/G_ACC));
+    double pitch = -atan2( imu_linear_acceleration_[0]/G_ACC, sqrt( imu_linear_acceleration_[1]/G_ACC* imu_linear_acceleration_[1]/G_ACC +  imu_linear_acceleration_[2]/G_ACC* imu_linear_acceleration_[2]/G_ACC));
     double yaw = 0.0;
 
     tf2::Quaternion imu_orient;
     imu_orient.setRPY(roll, pitch, yaw);
 
-    imu_orientation[0] = imu_orient.getX();
-    imu_orientation[1] = imu_orient.getY();
-    imu_orientation[2] = imu_orient.getZ();
-    imu_orientation[3] = imu_orient.getW();
+    imu_orientation_[0] = imu_orient.getX();
+    imu_orientation_[1] = imu_orient.getY();
+    imu_orientation_[2] = imu_orient.getZ();
 }
 
 void RobotisOPHardwareInterface::write(ros::Time time, ros::Duration period)
 {
+    if(!controller_running_)
+    {
+        if (!std::isnan(cmd_[0]))
+        {
+            setBlockWrite(false);
+            controller_running_=true;
+            return;
+        }
+    }
+
+    if(block_write_)
+    {
+        return;
+    }
+
     for (unsigned int joint_index = 0; joint_index < JointData::NUMBER_OF_JOINTS-1; joint_index++)
     {
         int id_index = joint_index+1;
@@ -247,7 +268,7 @@ void RobotisOPHardwareInterface::write(ros::Time time, ros::Duration period)
             }
             else
             {
-                //ROS_INFO("Cmd %i %f", id_index, cmd[joint_index]);
+
                 MotionStatus::m_CurrentJoints.SetAngle(id_index,angles::to_degrees(cmd_[joint_index])+ros_joint_offsets[joint_index]);
             }
         }
@@ -300,6 +321,7 @@ void RobotisOPHardwareInterface::enableWalking(std_msgs::BoolConstPtr enable)
 {
     if(!Walking::GetInstance()->IsRunning() && enable->data)
     {
+        setBlockWrite(true);
         Walking::GetInstance()->m_Joint.SetEnableLowerBody(true, true);
         Walking::GetInstance()->Start();
     }
@@ -307,6 +329,7 @@ void RobotisOPHardwareInterface::enableWalking(std_msgs::BoolConstPtr enable)
     {
         Walking::GetInstance()->m_Joint.SetEnableLowerBody(false, true);
         Walking::GetInstance()->Stop();
+        setBlockWrite(false);
     }
 }
 
@@ -336,6 +359,7 @@ void RobotisOPHardwareInterface::checkFall()
 
 void RobotisOPHardwareInterface::startAction(std_msgs::Int32 action_index)
 {
+    setBlockWrite(true);
     //enable MotionManager if necessary
     if(!MotionManager::GetInstance()->GetEnable())
         MotionManager::GetInstance()->SetEnable(true);
@@ -358,9 +382,76 @@ void RobotisOPHardwareInterface::startAction(std_msgs::Int32 action_index)
         usleep(8*1000);
     }
 
+    setBlockWrite(false);
     Action::GetInstance()->m_Joint.SetEnableBody(false,true);
     MotionStatus::m_CurrentJoints.SetEnableBody(true,true);
 }
 
+void RobotisOPHardwareInterface::setBlockWrite(bool block)
+{
+    if(block)
+    {
+        block_write_ = true;
+        //ROS_INFO("Blocked Write");
+    }
+    else
+    {
+        block_write_ = false;
+        std::vector<ros::Publisher> joint_publisher;
+        ros::NodeHandle n;
 
+        std_msgs::Float64 angle_msg;
+
+        ros::Publisher j15_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_ankle1_l_position_controller/command", 100);
+        ros::Publisher j14_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_ankle1_r_position_controller/command", 100);
+        ros::Publisher j17_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_ankle2_l_position_controller/command", 100);
+        ros::Publisher j16_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_ankle2_r_position_controller/command", 100);
+        ros::Publisher j03_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_high_arm_l_position_controller/command", 100);
+        ros::Publisher j02_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_high_arm_r_position_controller/command", 100);
+        ros::Publisher j05_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_low_arm_l_position_controller/command", 100);
+        ros::Publisher j04_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_low_arm_r_position_controller/command", 100);
+        ros::Publisher j18_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_pan_position_controller/command", 100);
+        ros::Publisher j07_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_pelvis_l_position_controller/command", 100);
+        ros::Publisher j06_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_pelvis_r_position_controller/command", 100);
+        ros::Publisher j01_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_shoulder_l_position_controller/command", 100);
+        ros::Publisher j00_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_shoulder_r_position_controller/command", 100);
+        ros::Publisher j09_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_thigh1_l_position_controller/command", 100);
+        ros::Publisher j08_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_thigh1_r_position_controller/command", 100);
+        ros::Publisher j11_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_thigh2_l_position_controller/command", 100);
+        ros::Publisher j10_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_thigh2_r_position_controller/command", 100);
+        ros::Publisher j13_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_tibia_l_position_controller/command", 100);
+        ros::Publisher j12_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_tibia_r_position_controller/command", 100);
+        ros::Publisher j19_pub = n.advertise<std_msgs::Float64>("/robotis_op/j_tilt_position_controller/command", 100);
+
+        joint_publisher.push_back(j00_pub);
+        joint_publisher.push_back(j01_pub);
+        joint_publisher.push_back(j02_pub);
+        joint_publisher.push_back(j03_pub);
+        joint_publisher.push_back(j04_pub);
+        joint_publisher.push_back(j05_pub);
+        joint_publisher.push_back(j06_pub);
+        joint_publisher.push_back(j07_pub);
+        joint_publisher.push_back(j08_pub);
+        joint_publisher.push_back(j09_pub);
+        joint_publisher.push_back(j10_pub);
+        joint_publisher.push_back(j11_pub);
+        joint_publisher.push_back(j12_pub);
+        joint_publisher.push_back(j13_pub);
+        joint_publisher.push_back(j14_pub);
+        joint_publisher.push_back(j15_pub);
+        joint_publisher.push_back(j16_pub);
+        joint_publisher.push_back(j17_pub);
+        joint_publisher.push_back(j18_pub);
+        joint_publisher.push_back(j19_pub);
+
+        for(unsigned int i = 0; i<joint_publisher.size(); ++i)
+        {
+
+            angle_msg.data = pos_[i];
+            joint_publisher[i].publish(angle_msg);
+
+        }
+        //ROS_INFO("Unblocked Write");
+    }
+}
 }

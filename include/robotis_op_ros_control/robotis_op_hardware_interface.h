@@ -69,6 +69,9 @@ protected:
     RobotisOPHardwareInterface& operator=(RobotisOPHardwareInterface const&);
 
     Robot::JointData* getJoint(int id);
+
+    void setBlockWrite(bool block);
+
     static RobotisOPHardwareInterface::Ptr singelton;
 
     // UIDs of joints and sensors
@@ -86,11 +89,9 @@ protected:
     ros::Time last_joint_state_read_;
 
 
-    // ros controll interfaces
+    // ros control interfaces
     hardware_interface::JointStateInterface joint_state_interface_;
     hardware_interface::PositionJointInterface pos_joint_interface_;
-
-
     hardware_interface::ImuSensorInterface imu_sensor_interface_;
 
     // Status arrays containing values for each joint (+ dummy joints to model the gripper)
@@ -101,10 +102,10 @@ protected:
     double eff_dummy_[Robot::JointData::NUMBER_OF_JOINTS+3];
 
     // IMU
-    hardware_interface::ImuSensorHandle::Data imu_data;
-    double imu_orientation[4];
-    double imu_angular_velocity[3];
-    double imu_linear_acceleration[3];
+    hardware_interface::ImuSensorHandle::Data imu_data_;
+    double imu_orientation_[4];
+    double imu_angular_velocity_[3];
+    double imu_linear_acceleration_[3];
 
 
     //Robot
@@ -112,6 +113,11 @@ protected:
     Robot::CM730 *cm730_;
     Robot::LinuxMotionTimer *motion_timer_;
     std::string cm730_device_, action_file_, config_file_;
+
+
+    //misc
+    bool block_write_;
+    bool controller_running_; //to handle conflicts between ROS control and motion manager
 
 
 };
