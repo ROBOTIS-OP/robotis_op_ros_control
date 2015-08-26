@@ -1,0 +1,46 @@
+
+# trajectory controllers ---------------------------------------
+left_arm_traj_controller:
+    type: position_controllers/JointTrajectoryController
+    joints:
+      - j_shoulder_l
+      - j_high_arm_l
+      - j_low_arm_l
+      - j_wrist_l
+      - j_gripper_l
+
+right_arm_traj_controller:
+    type: position_controllers/JointTrajectoryController
+    joints:
+      - j_shoulder_r
+      - j_high_arm_r
+      - j_low_arm_r
+      - j_wrist_r
+      - j_gripper_r
+
+head_traj_controller:
+    type: position_controllers/JointTrajectoryController
+    joints:
+      - j_pan
+      - j_tilt
+
+left_leg_traj_controller:
+    type: position_controllers/JointTrajectoryController
+    joints:
+      - j_pelvis_l
+      - j_thigh1_l
+      - j_thigh2_l
+      - j_tibia_l
+      - j_ankle1_l
+      - j_ankle2_l 
+
+right_leg_traj_controller:
+    type: position_controllers/JointTrajectoryController
+    joints:
+      - j_pelvis_r
+      - j_thigh1_r
+      - j_thigh2_r
+      - j_tibia_r
+      - j_ankle1_r
+      - j_ankle2_r
+      
