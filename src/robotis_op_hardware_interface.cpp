@@ -134,7 +134,7 @@ RobotisOPHardwareInterface::RobotisOPHardwareInterface()
     for (unsigned int id_index = 0; id_index < JointData::NUMBER_OF_JOINTS+3; id_index++)
     {
         // connect and register the joint state interface
-        hardware_interface::JointStateHandle joint_state_handle(jointUIDs[id_index], &pos_[id_index], &vel_dummy_[id_index], &eff_dummy_[id_index]);
+        hardware_interface::JointStateHandle joint_state_handle(jointUIDs[id_index], &pos_[id_index], &vel_[id_index], &eff_dummy_[id_index]);
         joint_state_interface_.registerHandle(joint_state_handle);
         // connect and register the joint position interface
         hardware_interface::JointHandle joint_handle(joint_state_handle, &cmd_[id_index]);
@@ -197,18 +197,17 @@ void RobotisOPHardwareInterface::read(ros::Time time, ros::Duration period)
     for (unsigned int i = 0; i < JointData::NUMBER_OF_JOINTS-1; i++)
     {
         cmd_[i] = std::numeric_limits<double>::quiet_NaN();
-        pos_[i] = std::numeric_limits<double>::quiet_NaN();
-        vel_dummy_[i] = std::numeric_limits<double>::quiet_NaN();
+       // pos_[i] = std::numeric_limits<double>::quiet_NaN();
+        vel_[i] = std::numeric_limits<double>::quiet_NaN();
         eff_dummy_[i] = std::numeric_limits<double>::quiet_NaN();
     }
 
     for (unsigned int joint_index = 1; joint_index < JointData::NUMBER_OF_JOINTS; joint_index++)
     {
         int id_index = joint_index-1;
-
-        pos_[id_index]= angles::from_degrees(MotionStatus::m_CurrentJoints.GetAngle(joint_index)+ros_joint_offsets[joint_index]);
-
-
+        double new_pos = angles::from_degrees(MotionStatus::m_CurrentJoints.GetAngle(joint_index)+ros_joint_offsets[joint_index]);
+        vel_[id_index] = (new_pos - pos_[id_index])/(double)period.toSec();
+        pos_[id_index]= new_pos;
         //reading velocity and acceleration with the current firmware is not possible without jamming the cm730, state 05/2015
     }
 

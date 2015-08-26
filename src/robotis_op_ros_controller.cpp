@@ -121,14 +121,11 @@ int main(int argc, char** argv)
 
     while (ros::ok())
     {
-
         rate.sleep();
-
         ros::Time current_time = ros::Time::now();
         ros::Duration elapsed_time = current_time - last_time;
-        last_time = current_time;
-
         robotis_op_ros_controller_node.update(current_time, elapsed_time);
+        last_time = current_time;
     }
 
     return 0;

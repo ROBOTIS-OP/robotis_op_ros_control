@@ -98,7 +98,7 @@ protected:
     // vel_dummy_ and eff_dummy_ are required to meet the interface, but not actually used
     double cmd_[Robot::JointData::NUMBER_OF_JOINTS+3];
     double pos_[Robot::JointData::NUMBER_OF_JOINTS+3];
-    double vel_dummy_[Robot::JointData::NUMBER_OF_JOINTS+3];
+    double vel_[Robot::JointData::NUMBER_OF_JOINTS+3];
     double eff_dummy_[Robot::JointData::NUMBER_OF_JOINTS+3];
 
     // IMU
