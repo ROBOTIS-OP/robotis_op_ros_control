@@ -308,10 +308,10 @@ void RobotisOPHardwareInterface::setTorqueOn(bool enable)
 void RobotisOPHardwareInterface::cmdWalking(const geometry_msgs::Twist::ConstPtr& msg)
 {
     double period = Walking::GetInstance()->PERIOD_TIME;
-    Walking::GetInstance()->X_MOVE_AMPLITUDE=(msg->linear.x/period*1000.0);
-    Walking::GetInstance()->Y_MOVE_AMPLITUDE=(msg->linear.y/period*1000.0);
+    Walking::GetInstance()->X_MOVE_AMPLITUDE=(msg->linear.x/period*1000.0*10.0);
+    Walking::GetInstance()->Y_MOVE_AMPLITUDE=(msg->linear.y/period*1000.0*10.0);
     // compute the angular motion parameters to achieve the desired angular speed
-    Walking::GetInstance()->A_MOVE_AMPLITUDE=(msg->angular.z/period*180.0)/(2.0*3.14159);// in degrees per step
+    Walking::GetInstance()->A_MOVE_AMPLITUDE=(msg->angular.z/period);// in rad per sec
     // ROS_INFO("Walking: periode %f x %f y %f a %f",Walking::GetInstance()->PERIOD_TIME,Walking::GetInstance()->X_MOVE_AMPLITUDE,Walking::GetInstance()->Y_MOVE_AMPLITUDE,Walking::GetInstance()->A_MOVE_AMPLITUDE);
 }
 
